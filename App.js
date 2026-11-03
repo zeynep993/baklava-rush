@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity,
-  StyleSheet, SafeAreaView
+  View, Text, TouchableOpacity, StyleSheet,
+  SafeAreaView, ScrollView
 } from 'react-native';
 
 const desserts = [
@@ -12,12 +12,27 @@ const desserts = [
   { name: 'Sobiyet', emoji: '🍯', points: 15 },
 ];
 
+const customers = [
+  { name: 'Sophia', emoji: '👩🏻' },
+  { name: 'James', emoji: '👨🏻' },
+  { name: 'Emma', emoji: '👩🏽' },
+  { name: 'Oliver', emoji: '👨🏽' },
+  { name: 'Mia', emoji: '👩🏼' },
+  { name: 'Noah', emoji: '👨🏼' },
+];
+
 export default function App() {
   const [started, setStarted] = useState(false);
   const [score, setScore] = useState(0);
   const [time, setTime] = useState(60);
-  const [order, setOrder] = useState(1);
+  const [order, setOrder] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [lastCustomer, setLastCustomer] = useState(-1);
+  const [busy, setBusy] = useState(false);
+
+  const currentDessert = desserts[order % desserts.length];
+  const customer = customers[order % customers.length];
 
   useEffect(() => {
     if (!started || gameOver) return;
@@ -34,103 +49,158 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [started, time, gameOver]);
 
-  const serve = (dessert) => {
-    const correct = dessert.name === desserts[(order - 1) % 4].name;
-
-    if (correct) {
-      setScore(s => s + dessert.points);
-    } else {
-      setScore(s => Math.max(0, s - 5));
-    }
-
-    setOrder(o => o + 1);
-  };
-
-  const restart = () => {
+  const startGame = () => {
     setScore(0);
     setTime(60);
-    setOrder(1);
+    setOrder(0);
+    setFeedback('');
     setGameOver(false);
+    setBusy(false);
     setStarted(true);
   };
 
-  const card = {
-    backgroundColor: '#FFF0D5',
-    padding: 18,
-    borderRadius: 18,
-    marginVertical: 7,
-    alignItems: 'center',
-    width: '100%'
+  const serve = (dessert) => {
+    if (busy || gameOver) return;
+
+    setBusy(true);
+
+    const correct = dessert.name === currentDessert.name;
+
+    if (correct) {
+      setScore(s => s + dessert.points);
+      setFeedback('🎉 PERFECT! +' + dessert.points + ' POINTS');
+    } else {
+      setScore(s => s - 5);
+      setFeedback('❌ WRONG ORDER! -5 POINTS');
+    }
+
+    let nextCustomer = (order + 1) % customers.length;
+
+    if (nextCustomer === lastCustomer) {
+      nextCustomer = (nextCustomer + 1) % customers.length;
+    }
+
+    setLastCustomer(order % customers.length);
+
+    setTimeout(() => {
+      setOrder(o => o + 1);
+      setFeedback('');
+      setBusy(false);
+    }, 900);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.logo}>🍯</Text>
-      <Text style={styles.title}>BAKLAVA RUSH</Text>
-      <Text style={styles.subtitle}>A SWEET SHOP CHALLENGE</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={true}
+      >
+        <Text style={styles.logo}>🍯</Text>
+        <Text style={styles.title}>BAKLAVA RUSH</Text>
+        <Text style={styles.subtitle}>THE ULTIMATE DESSERT CHALLENGE</Text>
 
-      {!started ? (
-        <View style={styles.panel}>
-          <Text style={styles.big}>🥮</Text>
-          <Text style={styles.heading}>Welcome to Baklava Shop!</Text>
-          <Text style={styles.description}>
-            Serve delicious Turkish desserts
-            and earn as many points as possible!
-          </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setStarted(true)}>
-            <Text style={styles.buttonText}>START GAME</Text>
-          </TouchableOpacity>
-        </View>
-      ) : gameOver ? (
-        <View style={styles.panel}>
-          <Text style={styles.big}>🏆</Text>
-          <Text style={styles.heading}>GAME OVER!</Text>
-          <Text style={styles.description}>Your Score: {score}</Text>
-          <TouchableOpacity style={styles.button} onPress={restart}>
-            <Text style={styles.buttonText}>PLAY AGAIN</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.game}>
-          <View style={styles.stats}>
-            <Text style={styles.stat}>⭐ {score} Points</Text>
-            <Text style={styles.stat}>⏱️ {time}s</Text>
-          </View>
-
+        {!started ? (
           <View style={styles.panel}>
-            <Text style={styles.heading}>Customer Order</Text>
-            <Text style={styles.big}>
-              {desserts[(order - 1) % 4].emoji}
-            </Text>
-            <Text style={styles.order}>
-              {desserts[(order - 1) % 4].name}
+            <Text style={styles.big}>🥮</Text>
+            <Text style={styles.heading}>Welcome to Baklava Shop!</Text>
+            <Text style={styles.description}>
+              Serve your customers delicious Turkish desserts!
             </Text>
             <Text style={styles.description}>
-              Choose the correct dessert!
+              Earn points and become the Baklava Master!
+            </Text>
+            <TouchableOpacity style={styles.button} onPress={startGame}>
+              <Text style={styles.buttonText}>START GAME</Text>
+            </TouchableOpacity>
+          </View>
+        ) : gameOver ? (
+          <View style={styles.panel}>
+            <Text style={styles.big}>🏆</Text>
+            <Text style={styles.heading}>GAME OVER!</Text>
+            <Text style={styles.description}>Time is up!</Text>
+            <Text style={styles.finalScore}>{score} POINTS</Text>
+            <Text style={styles.description}>
+              Great job serving your customers!
+            </Text>
+            <TouchableOpacity style={styles.button} onPress={startGame}>
+              <Text style={styles.buttonText}>PLAY AGAIN</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.game}>
+            <View style={styles.stats}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>YOUR SCORE</Text>
+                <Text style={styles.stat}>⭐ {score}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>TIME LEFT</Text>
+                <Text style={styles.stat}>⏱️ {time}s</Text>
+              </View>
+            </View>
+
+            <View style={styles.shop}>
+              <Text style={styles.shopEmoji}>🏪</Text>
+              <Text style={styles.shopTitle}>SWEET PALACE</Text>
+              <Text style={styles.shopSubtitle}>Traditional Turkish Desserts</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.smallTitle}>CUSTOMER #{order + 1}</Text>
+              <Text style={styles.customerEmoji}>
+                {customer.emoji}
+              </Text>
+              <Text style={styles.heading}>
+                Hello! I'm {customer.name}
+              </Text>
+              <Text style={styles.description}>
+                I would like:
+              </Text>
+              <Text style={styles.big}>
+                {currentDessert.emoji}
+              </Text>
+              <Text style={styles.order}>
+                {currentDessert.name}
+              </Text>
+              <Text style={styles.description}>
+                Please serve my dessert!
+              </Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>CHOOSE A DESSERT</Text>
+
+            {desserts.map((dessert, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.card,
+                  busy && styles.disabledCard
+                ]}
+                onPress={() => serve(dessert)}
+                disabled={busy}
+              >
+                <Text style={styles.dessert}>
+                  {dessert.emoji} {dessert.name}
+                </Text>
+                <Text style={styles.points}>
+                  +{dessert.points} POINTS
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.feedback}>
+              <Text style={styles.feedbackText}>
+                {feedback || '⭐ Correct: +10 / +15   |   Wrong: -5'}
+              </Text>
+            </View>
+
+            <Text style={styles.footer}>
+              Made with love and pistachios 💚
             </Text>
           </View>
-
-          <Text style={styles.heading}>Choose a Dessert</Text>
-
-          {desserts.map((d, i) => (
-            <TouchableOpacity
-              key={i}
-              style={card}
-              onPress={() => serve(d)}>
-              <Text style={styles.dessert}>
-                {d.emoji} {d.name}
-              </Text>
-              <Text style={styles.points}>+{d.points} Points</Text>
-            </TouchableOpacity>
-          ))}
-
-          <Text style={styles.description}>
-            Correct: +10 / +15  |  Wrong: -5
-          </Text>
-        </View>
-      )}
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -139,74 +209,174 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#542A19',
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
     alignItems: 'center',
     padding: 20,
-    paddingTop: 45
+    paddingBottom: 50,
   },
-  logo: { fontSize: 48 },
+  logo: {
+    fontSize: 45,
+  },
   title: {
-    fontSize: 30,
+    fontSize: 29,
     fontWeight: 'bold',
-    color: '#FFD27A'
+    color: '#FFD27A',
+    textAlign: 'center',
   },
   subtitle: {
     color: '#FFF0D5',
-    letterSpacing: 3,
-    marginBottom: 25
+    letterSpacing: 2,
+    fontSize: 10,
+    marginTop: 5,
+    marginBottom: 15,
+  },
+  shop: {
+    backgroundColor: '#A85D25',
+    width: '100%',
+    borderRadius: 18,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  shopEmoji: {
+    fontSize: 35,
+  },
+  shopTitle: {
+    color: '#FFF0D5',
+    fontWeight: 'bold',
+    fontSize: 20,
+  },
+  shopSubtitle: {
+    color: '#FFE0A5',
+    fontSize: 12,
+  },
+  stats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginVertical: 15,
+  },
+  statBox: {
+    backgroundColor: '#75452B',
+    padding: 12,
+    borderRadius: 14,
+    width: '48%',
+    alignItems: 'center',
+  },
+  statLabel: {
+    color: '#FFE0A5',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  stat: {
+    color: '#FFD27A',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   panel: {
     backgroundColor: '#F9DDAA',
     borderRadius: 22,
-    padding: 25,
+    padding: 22,
     width: '100%',
     alignItems: 'center',
-    marginTop: 20
+    marginTop: 18,
   },
-  big: { fontSize: 65, margin: 12 },
+  smallTitle: {
+    color: '#A85D25',
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  customerEmoji: {
+    fontSize: 65,
+    marginTop: 8,
+  },
+  big: {
+    fontSize: 52,
+    margin: 10,
+  },
   heading: {
     color: '#542A19',
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: 'bold',
-    textAlign: 'center'
+    textAlign: 'center',
   },
   description: {
     color: '#75452B',
     textAlign: 'center',
-    marginVertical: 12
+    marginVertical: 8,
+  },
+  order: {
+    color: '#542A19',
+    fontSize: 23,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  sectionTitle: {
+    color: '#FFD27A',
+    fontSize: 19,
+    fontWeight: 'bold',
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  card: {
+    backgroundColor: '#FFF0D5',
+    padding: 18,
+    borderRadius: 17,
+    marginVertical: 7,
+    alignItems: 'center',
+    width: '100%',
+  },
+  disabledCard: {
+    opacity: 0.6,
+  },
+  dessert: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#542A19',
+  },
+  points: {
+    color: '#A85D25',
+    marginTop: 5,
+    fontWeight: 'bold',
+  },
+  feedback: {
+    backgroundColor: '#75452B',
+    padding: 15,
+    borderRadius: 14,
+    width: '100%',
+    marginTop: 15,
+  },
+  feedbackText: {
+    color: '#FFD27A',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#A85D25',
     padding: 17,
     borderRadius: 14,
     width: '100%',
-    marginTop: 15
+    marginTop: 18,
   },
   buttonText: {
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
-    fontSize: 18
+    fontSize: 18,
   },
-  game: { width: '100%', flex: 1 },
-  stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15
-  },
-  stat: {
-    color: '#FFD27A',
-    fontSize: 19,
-    fontWeight: 'bold'
-  },
-  order: {
-    fontSize: 23,
+  finalScore: {
+    color: '#A85D25',
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#542A19'
+    margin: 15,
   },
-  dessert: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#542A19'
+  footer: {
+    color: '#FFE0A5',
+    marginTop: 25,
+    textAlign: 'center',
   },
-  points: { color: '#A85D25', marginTop: 5 }
 });
