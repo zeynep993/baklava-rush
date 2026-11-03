@@ -1,0 +1,20 @@
+
+{
+  "expo": {
+    "name": "Baklava Rush",
+    "slug": "baklava-rush",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#542A19"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.baklavarush.game"
+    },
+    "android": {
+      "package": "com.baklavarush.game"
+    }
+  }
+}
